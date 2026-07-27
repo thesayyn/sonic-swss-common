@@ -24,4 +24,4 @@ register_toolchains("@sonic_build_infra//toolchains/gcc:all")
 
 # The actual dependencies are listed in sonic-build-infra, and re-exported.
 apt = use_extension("@rules_distroless//apt:extensions.bzl", "apt")
-use_repo(apt, "bookworm")
+use_repo(apt, "trixie")

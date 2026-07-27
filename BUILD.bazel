@@ -11,16 +11,16 @@ exports_files(["LICENSE"])
 swss_common_hdrs = ["//common:hdrs"]
 
 swss_common_deps = [
-    "@bookworm//libhiredis-dev:libhiredis",
-    "@bookworm//nlohmann-json3-dev:nlohmann-json3",
+    "@trixie//libhiredis-dev:libhiredis",
+    "@trixie//nlohmann-json3-dev:nlohmann-json3",
     "@libnl3//:libnl_3",
     "@libnl3//:libnl_route_3",
     "@libnl3//:libnl_nf_3",
-    "@bookworm//libyang2-dev:libyang2",
-    "@bookworm//libzmq3-dev:libzmq3",
-    "@bookworm//uuid-dev:uuid",
-    "@bookworm//libboost-dev:libboost",
-    "@bookworm//libboost-serialization-dev:libboost-serialization",
+    "@trixie//libyang-dev:libyang",
+    "@trixie//libzmq3-dev:libzmq3",
+    "@trixie//uuid-dev:uuid",
+    "@trixie//libboost-dev:libboost",
+    "@trixie//libboost-serialization-dev:libboost-serialization",
 ]
 
 filegroup(
@@ -100,11 +100,17 @@ cc_library(
 # The :common library has alwayslink=True to ensure all symbols are exported
 cc_binary(
     name = "libswsscommon_consolidated_base",
-    srcs = [
-        # Include static libraries directly to force static linking and bypass linker scripts
-        "@@rules_distroless++apt+bookworm_libbsd-dev-amd64_0.11.7-2//:usr/lib/x86_64-linux-gnu/libbsd.a",
-        "@@rules_distroless++apt+bookworm_libmd-dev-amd64_1.0.4-2//:usr/lib/x86_64-linux-gnu/libmd.a",
-    ],
+    # Include static libraries directly to force static linking and bypass linker scripts.
+    srcs = select({
+        "@platforms//cpu:x86_64": [
+            "@@rules_distroless++apt+trixie_libbsd-dev-amd64_0.12.2-2//:usr/lib/x86_64-linux-gnu/libbsd.a",
+            "@@rules_distroless++apt+trixie_libmd-dev-amd64_1.1.0-2-b1//:usr/lib/x86_64-linux-gnu/libmd.a",
+        ],
+        "@platforms//cpu:arm64": [
+            "@@rules_distroless++apt+trixie_libbsd-dev-arm64_0.12.2-2//:usr/lib/aarch64-linux-gnu/libbsd.a",
+            "@@rules_distroless++apt+trixie_libmd-dev-arm64_1.1.0-2-b1//:usr/lib/aarch64-linux-gnu/libmd.a",
+        ],
+    }),
     linkshared = True,
     linkopts = [
         "-static-libstdc++",
@@ -186,19 +192,43 @@ tar(
     mtree = ":dist_lua_mtree",
 )
 
-# Loose files: shared library, config, and binaries
-tar(
+# Loose files: shared library, config, and binaries.
+#
+# The library lands in a multiarch directory, and tar()'s mtree attribute must be a
+# literal list rather than a select(). So we declare one tar per architecture and
+# select between them in the :dist_loose alias below.
+DIST_LOOSE_SRCS = [
+    ":libswsscommon_consolidated.so",
+    "//common:database_config.json",
+    ":swssloglevel",
+]
+
+DIST_LOOSE_COMMON_MTREE = [
+    "var/run/redis/sonic-db/database_config.json type=file content=$(location //common:database_config.json)",
+    "usr/bin/swssloglevel type=file mode=0755 content=$(location :swssloglevel)",
+]
+
+[
+    tar(
+        name = "dist_loose_" + cpu,
+        srcs = DIST_LOOSE_SRCS,
+        mtree = [
+            "usr/lib/{}/libswsscommon.so type=file content=$(location :libswsscommon_consolidated.so)".format(multiarch),
+        ] + DIST_LOOSE_COMMON_MTREE,
+        target_compatible_with = ["@platforms//cpu:" + cpu],
+    )
+    for cpu, multiarch in [
+        ("x86_64", "x86_64-linux-gnu"),
+        ("arm64", "aarch64-linux-gnu"),
+    ]
+]
+
+alias(
     name = "dist_loose",
-    srcs = [
-        ":libswsscommon_consolidated.so",
-        "//common:database_config.json",
-        ":swssloglevel",
-    ],
-    mtree = [
-        "usr/lib/x86_64-linux-gnu/libswsscommon.so type=file content=$(location :libswsscommon_consolidated.so)",
-        "var/run/redis/sonic-db/database_config.json type=file content=$(location //common:database_config.json)",
-        "usr/bin/swssloglevel type=file mode=0755 content=$(location :swssloglevel)",
-    ],
+    actual = select({
+        "@platforms//cpu:x86_64": ":dist_loose_x86_64",
+        "@platforms//cpu:arm64": ":dist_loose_arm64",
+    }),
 )
 
 flatten(
