@@ -1,3 +1,5 @@
+"""Compiler and linker flags shared across the sonic-swss-common build."""
+
 # CXXFLAGS that we need for Bazel specifically. Not present in the Makefile
 CXXFLAGS_COMMON_BAZEL = [
     # TODO(bazel-ready): rules_distroless introduces a bunch of include directories that don't exist
@@ -55,7 +57,8 @@ CXXFLAGS_COMMON = CXXFLAGS_COMMON_MAKEFILE + CXXFLAGS_COMMON_BAZEL
 
 DBGFLAGS = select({
     "@sonic_build_infra//:debug_enabled": [
-        "-ggdb", "-gdwarf-5",
+        "-ggdb",
+        "-gdwarf-5",
     ],
     "//conditions:default": ["-g"],
 })
@@ -68,6 +71,7 @@ DBGFLAGS = select({
 # Point trixie's soversion at the file the libbsd0 package actually ships.
 #
 # TODO BL: drop this once rules_distroless stops treating ld scripts as shared libs.
+# buildifier: disable=external-path
 LIBBSD_LD_SCRIPT_REMAP = select({
     "@platforms//cpu:x86_64": [
         "-Wl,--remap-inputs=/usr/lib/x86_64-linux-gnu/libbsd.so.0.12.2=" +
