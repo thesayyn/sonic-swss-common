@@ -7,7 +7,7 @@ load("@sonic_build_infra//python:py_native_library.bzl", "py_native_library")
 swig_lib_deb(
     name = "swig_lib",
     data = "@trixie//swig",
-    strip_prefix = "usr/share/swig4.0",
+    strip_prefix = "usr/share/swig/4.3.0",
 )
 
 exports_files(["swsscommon.i"])

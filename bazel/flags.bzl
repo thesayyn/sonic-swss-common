@@ -59,3 +59,22 @@ DBGFLAGS = select({
     ],
     "//conditions:default": ["-g"],
 })
+
+# libbsd-dev ships /usr/lib/<multiarch>/libbsd.so as a GNU ld script whose GROUP()
+# names libbsd.so.0.<soversion> by absolute path.
+# That path does not exist inside the sandbox.
+# rules_distroless papers over this with a --remap-inputs linkopt,
+# but hardcodes bookworm's soversion (0.11.7)
+# Point trixie's soversion at the file the libbsd0 package actually ships.
+#
+# TODO BL: drop this once rules_distroless stops treating ld scripts as shared libs.
+LIBBSD_LD_SCRIPT_REMAP = select({
+    "@platforms//cpu:x86_64": [
+        "-Wl,--remap-inputs=/usr/lib/x86_64-linux-gnu/libbsd.so.0.12.2=" +
+        "$(BINDIR)/external/rules_distroless++apt+trixie_libbsd0-amd64_0.12.2-2/usr/lib/x86_64-linux-gnu/libbsd.so.0.12.2",
+    ],
+    "@platforms//cpu:arm64": [
+        "-Wl,--remap-inputs=/usr/lib/aarch64-linux-gnu/libbsd.so.0.12.2=" +
+        "$(BINDIR)/external/rules_distroless++apt+trixie_libbsd0-arm64_0.12.2-2/usr/lib/aarch64-linux-gnu/libbsd.so.0.12.2",
+    ],
+})

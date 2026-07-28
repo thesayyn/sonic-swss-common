@@ -2,7 +2,7 @@ load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
 load("@rules_distroless//distroless:defs.bzl", "flatten")
 load("@tar.bzl", "mtree_mutate", "mtree_spec", "tar")
 load("//bazel:always_link_transition.bzl", "alwayslink_cc_binary")
-load("//bazel:flags.bzl", "CXXFLAGS_COMMON", "DBGFLAGS")
+load("//bazel:flags.bzl", "CXXFLAGS_COMMON", "DBGFLAGS", "LIBBSD_LD_SCRIPT_REMAP")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -66,7 +66,7 @@ cc_library(
     includes = [
         "common",
     ],
-    linkopts = ["-lboost_serialization"],
+    linkopts = ["-lboost_serialization"] + LIBBSD_LD_SCRIPT_REMAP,
     # Approach 1:
     deps = swss_common_deps,
     # Approach 2: BCR entries compiled from source

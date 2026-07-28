@@ -1,11 +1,12 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 load("@sonic_build_infra//swig:defs.bzl", "swig_gen_go", "swig_lib_deb")
+load("//bazel:flags.bzl", "LIBBSD_LD_SCRIPT_REMAP")
 
 # Extract SWIG library files from apt package for hermetic builds
 swig_lib_deb(
     name = "swig_lib",
     data = "@trixie//swig",
-    strip_prefix = "usr/share/swig4.0",
+    strip_prefix = "usr/share/swig/4.3.0",
 )
 
 swig_gen_go(
@@ -41,7 +42,7 @@ cc_library(
     linkopts = [
         # Allow undefined symbols resolved at runtime from the consolidated .so
         "-Wl,--allow-shlib-undefined",
-    ],
+    ] + LIBBSD_LD_SCRIPT_REMAP,
     visibility = ["//visibility:public"],
 )
 
